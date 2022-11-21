@@ -1,4 +1,5 @@
 #include "net/aprsock.h"
+#include "net/write.h"
 #include <strings.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -60,16 +61,36 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+/** void str_echo(int sockfd) */
+/** { */
+/**     char line[MAXLINE]; */
+/**     FILE *fpin, *fpout; */
+/**  */
+/**     fpin = fdopen(sockfd, "r"); */
+/**     fpout = fdopen(sockfd, "w"); */
+/**  */
+/**     while (fgets(line, MAXLINE, fpin) != NULL) { */
+/**         printf("%s", line); */
+/**         fputs(line, fpout); */
+/**     } */
+/** } */
+
 void str_echo(int sockfd)
 {
-    char line[MAXLINE];
-    FILE *fpin, *fpout;
+    ssize_t n;
+    char buf[MAXLINE];
 
-    fpin = fdopen(sockfd, "r");
-    fpout = fdopen(sockfd, "w");
+again:
+    while( (n = read(sockfd, buf, MAXLINE)) > 0)
+        if (writen(sockfd, buf, n) < 0) {
+            printf("write fail. errno:%d\n", errno);
+            exit(1);
+        }
 
-    while (fgets(line, MAXLINE, fpin) != NULL) {
-        printf("%s", line);
-        fputs(line, fpout);
-    }
+    printf("%s", buf);
+
+    if (n < 0 && errno == EINTR)
+        goto again;
+    else if (n < 0)
+        printf("str_echo read error. errno:%d\n", errno);
 }
